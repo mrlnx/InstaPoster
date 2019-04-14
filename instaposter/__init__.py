@@ -1,0 +1,1 @@
+from .instaposter import InstaPoster
