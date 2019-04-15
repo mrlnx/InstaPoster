@@ -4,8 +4,6 @@ from .util import LoggerUtil
 from .scheduler import Scheduler
 from .client_api import ClientApi
 
-from multiprocessing import Queue
-
 from datetime import datetime
 
 class InstaPoster(object):
@@ -25,8 +23,8 @@ class InstaPoster(object):
         # init csv file
         self.csv_loader = CSVLoader(self.filename)
 
-        self.csv_loader.update_last_row()
-        self.csv_loader.write_new_csv()
+        #self.csv_loader.update_last_row()
+        #self.csv_loader.write_new_csv()
 
         self.client = ClientApi(username, password)
         # result = self.client.upload('./public/this.friday/images/test.jpg', 'Zo hoort het #geinig', False)        #
@@ -38,6 +36,12 @@ class InstaPoster(object):
     def setup_scheduler(self, queue):
         # init scheduler
         self.scheduler = Scheduler(self.post_job, queue)
+
+    def start(self):
+        self.scheduler.start_scheduler()
+
+    def stop(self):
+        self.scheduler.stop_scheduler()
 
     def post_job(self):
 

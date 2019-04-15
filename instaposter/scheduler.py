@@ -23,26 +23,23 @@ class Scheduler:
 
     def pending_scheduler(self):
 
+        queue_empty = False
         schedule.every().minute.at(":00").do(self.job)
 
         while True:
-            print("pending_scheduler = true")
+            try:
+                scheduler_info = self.queue.get(False)
 
-            running = self.queue.get()
+                if scheduler_info['running'] == True:
+                    self.start_scheduler()
+                elif scheduler_info['running'] == False:
+                    self.stop_scheduler()
 
-            if running == True:
-                print('Runnin == True')
-                self.start_scheduler()
-            elif running == False:
-                print('Runnin == False')
-                self.stop_scheduler()
-            else:
-                print('Nothing')
+                queue_empty = False
+            except Exception as e:
+                queue_empty = True
 
             if self.scheduler_running:
-
-                print("run pending");
-
                 schedule.run_pending()
                 time.sleep(1)
 

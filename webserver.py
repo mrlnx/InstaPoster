@@ -4,16 +4,23 @@ from multiprocessing import Process, Queue
 from instaposter import InstaPoster
 
 app = Flask(__name__)
-ip = InstaPoster('yourgreenchoice', 'Geborenin1992?')
+ip = InstaPoster('lilandsue', 'Geborenin1941?')
+
+scheduler_data = {}
 
 @app.route('/api/v1.0/scheduler/start', methods=['GET'])
 def start_scheduler():
-    q.put(True)
+
+    scheduler_data['running'] = True
+    q.put(scheduler_data)
+
     return 'Scheduler started!'
 
 @app.route('/api/v1.0/scheduler/stop', methods=['GET'])
 def stop_scheduler():
-    q.put(False)
+
+    scheduler_data['running'] = False
+    q.put(scheduler_data)
     return 'Scheduler stopped!'
 
 if __name__ == "__main__":
