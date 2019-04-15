@@ -4,10 +4,12 @@ from .util import LoggerUtil
 from .scheduler import Scheduler
 from .client_api import ClientApi
 
+from multiprocessing import Queue
+
 from datetime import datetime
 
 class InstaPoster(object):
-    def __init__(self):
+    def __init__(self, username, password):
 
         self.last_job = datetime.now()
 
@@ -26,17 +28,16 @@ class InstaPoster(object):
         self.csv_loader.update_last_row()
         self.csv_loader.write_new_csv()
 
-        self.client = ClientApi('yourgreenchoice', 'Geborenin1992?')
+        self.client = ClientApi(username, password)
         # result = self.client.upload('./public/this.friday/images/test.jpg', 'Zo hoort het #geinig', False)        #
         # print(result)
 
         # setup scheduler
-        self.setup_scheduler()
+        # self.setup_scheduler()
 
-    def setup_scheduler(self):
+    def setup_scheduler(self, queue):
         # init scheduler
-        self.scheduler = Scheduler(self.post_job)
-        self.scheduler.start_scheduler()
+        self.scheduler = Scheduler(self.post_job, queue)
 
     def post_job(self):
 
@@ -55,17 +56,12 @@ class InstaPoster(object):
             caption = row['Caption']
             post_type = row['Type']
 
-            print('%s - %s - %s' % (filename, caption, post_type))
-
             post_type_bool = False
 
             if post_type == "Story":
                 post_type_bool = True
 
             posting_succeed = self.client.upload(filename, caption, post_type_bool)
-
-            # post row =>
-            posting_succeed = True
 
             if posting_succeed:
                 status = 'Posted'
