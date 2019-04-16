@@ -7,41 +7,72 @@ from .client_api import ClientApi
 from datetime import datetime
 
 class InstaPoster(object):
-    def __init__(self, username, password):
+    def __init__(self, username=None, password=None):
 
-        self.last_job = datetime.now()
-
-        # init file ulility
-        self.file_util = FileUtil('./public/this.friday/posts.csv')
-        self.filename = self.file_util.filename
-        self.last_modified = self.file_util.last_modified()
-
-        # init logger
-        self.default_logger = LoggerUtil('./public/this.friday/logs/default.log')
-        self.default_logger.write_new_line('InstaPoster started on on %s' % (datetime.now()))
-
-        # init csv file
-        self.csv_loader = CSVLoader(self.filename)
+        self.last_job = None
+        self.setup_client(username, password)
 
         #self.csv_loader.update_last_row()
         #self.csv_loader.write_new_csv()
 
-        self.client = ClientApi(username, password)
-        # result = self.client.upload('./public/this.friday/images/test.jpg', 'Zo hoort het #geinig', False)        #
-        # print(result)
+    def setup_client(self, username=None, password=None):
 
-        # setup scheduler
-        # self.setup_scheduler()
+        print('u:', username,'p:', password)
+
+        if not username is None and not password is None:
+
+            print('ik ga in loggen ja!')
+
+            # set credentials
+            self.username = username
+            self.password = password
+            self.client = ClientApi(username, password)
+
+            # init file ulility
+            self.file_util = FileUtil('./public/%s/posts.csv' % (username))
+            self.filename = self.file_util.filename
+            self.last_modified = self.file_util.last_modified()
+
+            # init logger
+            self.default_logger = LoggerUtil('./public/%s/logs/default.log' % (username))
+            self.default_logger.write_new_line('InstaPoster started on on %s' % (datetime.now()))
+
+            # init csv file
+            self.csv_loader = CSVLoader(self.filename)
+        else:
+            print('no pass no u')
+            self.client = None
 
     def setup_scheduler(self, queue):
-        # init scheduler
+
+        while self.client is None:
+            try:
+                credentials = queue.get(False)
+                self.username = credentials['username']
+                self.password = credentials['password']
+
+                print(self.username + " > " + self.password)
+
+                self.setup_client(self.username, self.password)
+                queue_empty = False
+            except Exception as e:
+                queue_empty = True
+
+
+        # #     if self.client == None:
+        #         try:
+        #             credentials = self.queue.get(False)
+        #             username = credentials['username']
+        #             password = credentials['password']
+        #
+        #             print(credentials)
+        #
+        #             self.setup_client(self, username, password)
+        #             queue_empty = False
+        #         except Exception as e:
+        #             queue_empty = True
+
         self.scheduler = Scheduler(self.post_job, queue)
-
-    def start(self):
-        self.scheduler.start_scheduler()
-
-    def stop(self):
-        self.scheduler.stop_scheduler()
 
     def post_job(self):
 
@@ -81,6 +112,7 @@ class InstaPoster(object):
 
         except Exception as e:
             # log TypeError
+            print(e)
             self.last_job = datetime.now()
 
     # scheduler.py - load checks csv every minute

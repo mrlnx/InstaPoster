@@ -40,6 +40,9 @@ class Scheduler:
                 queue_empty = True
 
             if self.scheduler_running:
+
+                print('scheduler is running for life!')
+
                 schedule.run_pending()
                 time.sleep(1)
 

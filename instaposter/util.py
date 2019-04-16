@@ -4,6 +4,37 @@ class FileUtil:
 
     def __init__(self, filename):
         self.filename = filename
+        self.create_project(filename)
+
+    def create_project(self, filename):
+        project_path = self.get_file_path(filename)
+
+        self.create_new_directory(project_path, 'images')
+        self.create_new_directory(project_path, 'logs')
+
+        self.create_file('%s/%s/%s' % (project_path, 'logs', 'default.log'))
+        self.create_file('%s' % (filename))
+
+    def create_file(self, filename):
+        try:
+            if not os.path.exists(filename):
+                f = open(filename, 'w+')
+                f.close()
+        except Exception as e:
+            # log error
+            print(e)
+
+    def create_new_directory(self, project_path, directory):
+        try:
+            if not os.path.exists( '%s/%s' % (project_path, directory) ):
+                os.makedirs('%s/%s' % (project_path, directory))
+        except Exception as e:
+            # log error
+            print(e)
+
+    def get_file_path(self, filename):
+        splitted_filename_path = filename.split('/')
+        return '/'.join(splitted_filename_path[:-1])
 
     def last_modified(self):
         return os.path.getmtime(self.filename);

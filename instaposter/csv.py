@@ -4,7 +4,11 @@ from datetime import datetime
 class CSVLoader:
     def __init__(self, filename):
         self.filename = filename
-        self.dataframe = pandas.read_csv(filename)
+
+        try:
+            self.dataframe = pandas.read_csv(filename)
+        except Exception as e:
+            print(e)
 
     def update_status(self, row_id, status):
         for i, row in self.dataframe.iterrows():
