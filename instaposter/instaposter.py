@@ -17,16 +17,15 @@ class InstaPoster(object):
 
     def setup_client(self, username=None, password=None):
 
-        print('u:', username,'p:', password)
+        result = None
 
         if not username is None and not password is None:
-
-            print('ik ga in loggen ja!')
 
             # set credentials
             self.username = username
             self.password = password
-            self.client = ClientApi(username, password)
+            self.client = ClientApi()
+            result = self.client.login(username, password)
 
             # init file ulility
             self.file_util = FileUtil('./public/%s/posts.csv' % (username))
@@ -40,37 +39,27 @@ class InstaPoster(object):
             # init csv file
             self.csv_loader = CSVLoader(self.filename)
         else:
-            print('no pass no u')
+            result = 'no_credentials'
             self.client = None
+        return result
 
     def setup_scheduler(self, queue):
 
         while self.client is None:
             try:
                 credentials = queue.get(False)
+
                 self.username = credentials['username']
                 self.password = credentials['password']
+                result = self.setup_client(self.username, self.password)
 
-                print(self.username + " > " + self.password)
+                print('setup_scheduler result: ', result)
 
-                self.setup_client(self.username, self.password)
-                queue_empty = False
+                queue.put(result)
+
+                self.queue_empty = False
             except Exception as e:
-                queue_empty = True
-
-
-        # #     if self.client == None:
-        #         try:
-        #             credentials = self.queue.get(False)
-        #             username = credentials['username']
-        #             password = credentials['password']
-        #
-        #             print(credentials)
-        #
-        #             self.setup_client(self, username, password)
-        #             queue_empty = False
-        #         except Exception as e:
-        #             queue_empty = True
+                self.queue_empty = True
 
         self.scheduler = Scheduler(self.post_job, queue)
 
@@ -109,6 +98,8 @@ class InstaPoster(object):
 
             # log
             self.default_logger.write_new_line('Posting new picture | File last modified on %s | %s' % (self.last_modified, self.filename))
+
+
 
         except Exception as e:
             # log TypeError

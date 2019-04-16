@@ -3,7 +3,7 @@
 import os
 import json
 import codecs
-from instagram_private_api import Client, ClientCompatPatch, ClientCookieExpiredError, ClientLoginRequiredError
+from instagram_private_api import Client, ClientCompatPatch, ClientCookieExpiredError, ClientLoginRequiredError, ClientLoginError, ClientError
 
 from .media import Media
 
@@ -11,11 +11,13 @@ import warnings
 warnings.filterwarnings("ignore")
 
 class ClientApi(object):
-    def __init__(self, username, password):
+    def __init__(self):#, username, password):
         self.settings = 'settings.json'
-        self.login(username, password)
+        #self.login(username, password)
 
     def login(self, username, password):
+
+        response = {}
 
         try:
             if os.path.isfile(self.settings):
@@ -28,11 +30,21 @@ class ClientApi(object):
                                          password,
                                          settings=cached_settings)
 
+            response['status'] = 'success'
         except (ClientCookieExpiredError, ClientLoginRequiredError) as e:
             self.client_api = Client(username,
                                      password,
                                      device_id=self.device_id,
                                      on_login=lambda x: self.write_cache(x, self.settings))
+            response['status'] = 'success'
+        except ClientLoginError as e:
+            response['status'] = str(e)
+        except ClientError as e:
+            response['status'] = str(e)
+        except Exception as e:
+            response['status'] = str(e)
+        finally:
+            return response
 
     def upload(self, file, caption='', story=False):
 
