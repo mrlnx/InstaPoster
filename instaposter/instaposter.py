@@ -1,6 +1,5 @@
 from .csv import CSVLoader
-from .util import FileUtil
-from .util import LoggerUtil
+from .util import FileUtil, LoggerUtil, DateUtil
 from .scheduler import Scheduler
 from .client_api import ClientApi
 from .sheets_api import SheetsApi
@@ -40,6 +39,9 @@ class InstaPoster(object):
             # # init csv file
             # self.csv_loader = CSVLoader(self.filename)
 
+            # init date util
+            self.date_util = DateUtil()
+
             # init logger
             self.default_logger = LoggerUtil('./public/%s/logs/default.log' % (username))
             self.default_logger.write_new_line('InstaPoster started on on %s' % (datetime.now()))
@@ -74,7 +76,6 @@ class InstaPoster(object):
         # jobs['CSVJobEveryMinuteAt00']['every'] = None
         # jobs['CSVJobEveryMinuteAt00']['time'] = ':00'
 
-
         jobs['MakeInstragramPost'] = {}
         jobs['MakeInstragramPost']['job'] = self.post_instagram_job
         jobs['MakeInstragramPost']['type'] = 'minute'
@@ -88,7 +89,6 @@ class InstaPoster(object):
 
         self.scheduler = Scheduler(jobs, queue)
 
-
     def update_data_job(self):
         print('update data frame from google spreadsheet api')
         self.sheets.set_values()
@@ -100,9 +100,19 @@ class InstaPoster(object):
         values = self.sheets.get_values_by_datetime()
 
         for value in values:
+
             filename = value['filename']
             caption = value['caption']
             type = value['type']
+
+            input = {}
+            input['format'] = '%d-%m-%Y %H:%M'
+            input['datetime'] = '%s %s' % (value['date'], value['time'])
+
+            output = {}
+            output['format'] = '%Y%m%d_%H%M'
+
+            date_util.datetime_to_format_string(input, output)
 
             post_type_bool = False
 
@@ -121,9 +131,6 @@ class InstaPoster(object):
                     # update status when posting success
                 else:
                     status = 'Posting failed'
-
-
-
 
     # def post_job(self):
     #

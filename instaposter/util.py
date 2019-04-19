@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 
 class FileUtil:
 
@@ -58,3 +59,12 @@ class LoggerUtil:
         self.file_read_lines.append(content + '\n')
         with open(self.filename, 'w') as self.file_write:
             self.file_write.writelines(self.file_read_lines)
+
+
+class DateUtil:
+    def __init__(self):
+        print('__init__')
+
+    def datetime_to_format_string(self, input, output):
+        datetime_obj = datetime.strptime('%s' % input['datetime'], input['format'])
+        return datetime_obj.strftime(output['format'])
