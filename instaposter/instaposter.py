@@ -3,6 +3,8 @@ from .util import FileUtil
 from .util import LoggerUtil
 from .scheduler import Scheduler
 from .client_api import ClientApi
+from .sheets_api import SheetsApi
+from .drive_api import DriveApi
 
 from datetime import datetime
 
@@ -19,6 +21,9 @@ class InstaPoster(object):
 
         result = None
 
+        self.sheets = SheetsApi()
+        self.drive = DriveApi()
+
         if not username is None and not password is None:
 
             # set credentials
@@ -27,17 +32,18 @@ class InstaPoster(object):
             self.client = ClientApi()
             result = self.client.login(username, password)
 
-            # init file ulility
-            self.file_util = FileUtil('./public/%s/posts.csv' % (username))
-            self.filename = self.file_util.filename
-            self.last_modified = self.file_util.last_modified()
+            # # init file ulility
+            # self.file_util = FileUtil('./public/%s/posts.csv' % (username))
+            # self.filename = self.file_util.filename
+            # self.last_modified = self.file_util.last_modified()
+            #
+            # # init csv file
+            # self.csv_loader = CSVLoader(self.filename)
 
             # init logger
             self.default_logger = LoggerUtil('./public/%s/logs/default.log' % (username))
             self.default_logger.write_new_line('InstaPoster started on on %s' % (datetime.now()))
 
-            # init csv file
-            self.csv_loader = CSVLoader(self.filename)
         else:
             result = 'no_credentials'
             self.client = None
@@ -61,50 +67,106 @@ class InstaPoster(object):
             except Exception as e:
                 self.queue_empty = True
 
-        self.scheduler = Scheduler(self.post_job, queue)
+        jobs = {}
+        # jobs['CSVJobEveryMinuteAt00'] = {}
+        # jobs['CSVJobEveryMinuteAt00']['job'] = self.post_job
+        # jobs['CSVJobEveryMinuteAt00']['type'] = 'minute'
+        # jobs['CSVJobEveryMinuteAt00']['every'] = None
+        # jobs['CSVJobEveryMinuteAt00']['time'] = ':00'
 
-    def post_job(self):
 
-        now = datetime.now()
+        jobs['MakeInstragramPost'] = {}
+        jobs['MakeInstragramPost']['job'] = self.post_instagram_job
+        jobs['MakeInstragramPost']['type'] = 'minute'
+        jobs['MakeInstragramPost']['every'] = None
+        jobs['MakeInstragramPost']['time'] = ':00'
 
-        if self.file_util.last_modified() > self.last_modified:
-            self.default_logger.write_new_line('File has changed | File last modified on %s | %s' % (self.last_modified, self.filename))
-            self.last_modified = self.file_util.last_modified()
-            self.csv_loader.update_dataframe()
+        jobs['SheetsApiUpdate'] = {}
+        jobs['SheetsApiUpdate']['job'] = self.update_data_job
+        jobs['SheetsApiUpdate']['type'] = 'minutes'
+        jobs['SheetsApiUpdate']['every'] = 5
 
-        try:
-            # check if row can be found by date and time
-            row = self.csv_loader.row_by_datetime(datetime(now.year, now.month, now.day, now.hour, now.minute, 0))
+        self.scheduler = Scheduler(jobs, queue)
 
-            filename = row['Bestandsnaam']
-            caption = row['Caption']
-            post_type = row['Type']
+
+    def update_data_job(self):
+        print('update data frame from google spreadsheet api')
+        self.sheets.set_values()
+        self.drive.set_files()
+
+    def post_instagram_job(self):
+        print('make instragram post by timestamp')
+
+        values = self.sheets.get_values_by_datetime()
+
+        for value in values:
+            filename = value['filename']
+            caption = value['caption']
+            type = value['type']
 
             post_type_bool = False
 
-            if post_type == "Story":
+            if type == 'story':
                 post_type_bool = True
 
-            posting_succeed = self.client.upload(filename, caption, post_type_bool)
+            downloaded_image = self.drive.download(filename, self.username)
 
-            if posting_succeed:
-                status = 'Posted'
-            else:
-                status = 'Posting failed'
+            if downloaded_image is not False:
 
-            # if posting is success
-            self.csv_loader.update_status(int(row['Id']), status)
-            self.csv_loader.write_new_csv()
+                posting_succeed = self.client.upload(downloaded_image, caption, post_type_bool)
 
-            # log
-            self.default_logger.write_new_line('Posting new picture | File last modified on %s | %s' % (self.last_modified, self.filename))
-
+                if posting_succeed:
+                    status = 'Posted'
+                    self.default_logger.write_new_line('Posting new picture | %s' % (downloaded_image))
+                    # update status when posting success
+                else:
+                    status = 'Posting failed'
 
 
-        except Exception as e:
-            # log TypeError
-            print(e)
-            self.last_job = datetime.now()
+
+
+    # def post_job(self):
+    #
+    #     now = datetime.now()
+    #
+    #     if self.file_util.last_modified() > self.last_modified:
+    #         self.default_logger.write_new_line('File has changed | File last modified on %s | %s' % (self.last_modified, self.filename))
+    #         self.last_modified = self.file_util.last_modified()
+    #         self.csv_loader.update_dataframe()
+    #
+    #     try:
+    #         # check if row can be found by date and time
+    #         row = self.csv_loader.row_by_datetime(datetime(now.year, now.month, now.day, now.hour, now.minute, 0))
+    #
+    #         filename = row['Bestandsnaam']
+    #         caption = row['Caption']
+    #         post_type = row['Type']
+    #
+    #         post_type_bool = False
+    #
+    #         if post_type == "Story":
+    #             post_type_bool = True
+    #
+    #         posting_succeed = self.client.upload(filename, caption, post_type_bool)
+    #
+    #         if posting_succeed:
+    #             status = 'Posted'
+    #         else:
+    #             status = 'Posting failed'
+    #
+    #         # if posting is success
+    #         self.csv_loader.update_status(int(row['Id']), status)
+    #         self.csv_loader.write_new_csv()
+    #
+    #         # log
+    #         self.default_logger.write_new_line('Posting new picture | File last modified on %s | %s' % (self.last_modified, self.filename))
+    #
+    #
+    #
+    #     except Exception as e:
+    #         # log TypeError
+    #         print(e)
+    #         self.last_job = datetime.now()
 
     # scheduler.py - load checks csv every minute
     # csv.py - reading and writing csv

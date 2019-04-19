@@ -1,5 +1,6 @@
-import os
+import os, time
 from flask import Flask, request, session, escape, jsonify
+from werkzeug import secure_filename 
 from multiprocessing import Process, Queue
 from instaposter import InstaPoster
 
@@ -72,13 +73,20 @@ def upload():
 @app.route('/api/v1.0/user/login', methods=['POST'])
 def login():
 
+    # if not p.is_alive():
+    #     q = Queue()
+    #     p = Process(target=ip.setup_scheduler, args=(q,))
+    #     p.start()
+
+    #if p.is_alive():
+    #    print(p.is_alive())
+
     data = {}
 
     if request.method == 'POST':
 
         username = request.form['username']
         password = request.form['password']
-
         run_scheduler = request.form['run']
 
         if username is not None and password is not None:
@@ -91,9 +99,7 @@ def login():
 
             while True:
                 try:
-
                     login_info = q.get(False)
-                    print(login_info)
 
                     session['username'] = username
 
@@ -104,17 +110,39 @@ def login():
                 except Exception as e:
                     pass
 
-
     return jsonify(data)
 
 @app.route('/api/v1.0/user/logout', methods=['POST'])
 def logout():
 
+    # try:
+    #     q.get(False)
+    #     q.close()
+    #     q.cancel_join_thread()
+    #     p.terminate()
+    #     p.join()
+    # except Exception as e:
+    #     pass
+    #
+    # q = Queue()
+    # p = Process(target=ip.setup_scheduler, args=(q,))
+    # p.start()
+
+    # if p.is_alive():
+    #     p.terminate()
+    #     time.sleep(0.5)
+    #     print(p.is_alive())
+    #
+    #     q = Queue()
+    #     p = Process(target=ip.setup_scheduler, args=(q,))
+    #     p.start()
+
+
     session.clear()
 
     # destroy session
     data = {}
-    data['username'] = session['username']
+    # data['username'] = session['username']
     data['message'] = 'loggedout'
     data['status'] = '200'
 
